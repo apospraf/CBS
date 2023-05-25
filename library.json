@@ -1,0 +1,30 @@
+{
+  "name":"CBS",
+  "description":"A library for the Spotfiy Control Box",
+  "keywords":"Spotify,Music,Arduino,ESP8266,Wifi",
+  "authors":
+  {
+    "name": "Apostolos Praftsiotis <apospraf@gmail.com",
+    "maintainer": true
+  },
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/apospraf/spotifyAPI"
+  },
+  "version": "0.1.0",
+  "license": "MIT",
+  "frameworks": "arduino",
+  "platforms": "*",
+  "dependencies": [
+    {
+      "name": "bblanchon/ArduinoJson"
+      
+    },
+    {
+      "name": "poelstra/arduino-multi-button"
+    }
+  ],
+  "build": {
+  }
+}

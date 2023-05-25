@@ -1,8 +1,8 @@
 #include <CBS.h>
 #include <PinButton.h>
 
-char clientId[] = "1f71648b1c7b48c6abfa51dad69190cf";     // Your client ID of your spotify APP
-char clientSecret[] = "3351a3a622b44b0dbae06a60204140cb"; // Your client Secret of your spotify APP (Do Not share this!)
+char clientId[] = "";     // Your client ID of your spotify APP
+char clientSecret[] = ""; // Your client Secret of your spotify APP (Do Not share this!)
 
 char scope[] = "user-read-playback-state%20user-modify-playback-state%20playlist-modify-public%20playlist-modify-private";
 

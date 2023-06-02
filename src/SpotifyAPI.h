@@ -17,20 +17,6 @@
 
 #define SPOTIFY_IMAGE_SERVER_FINGERPRINT "8B 24 D0 B7 12 AC DB 03 75 09 45 95 24 FF BE D8 35 E6 EB DF"
 
-#define SPOTIFY_PLAYER_ENDPOINT "/v1/me/player"
-#define SPOTIFY_DEVICES_ENDPOINT "/v1/me/player/devices"
-
-#define SPOTIFY_PLAY_ENDPOINT "/v1/me/player/play"
-#define SPOTIFY_PAUSE_ENDPOINT "/v1/me/player/pause"
-#define SPOTIFY_VOLUME_ENDPOINT "/v1/me/player/volume?volume_percent=%d"
-
-#define SPOTIFY_NEXT_TRACK_ENDPOINT "/v1/me/player/next"
-#define SPOTIFY_PREVIOUS_TRACK_ENDPOINT "/v1/me/player/previous"
-
-#define SPOTIFY_TOKEN_ENDPOINT "/api/token"
-
-#define SPOTIFY_SAVE_TRACK_ENDPOINT "/v1/playlists/%s/tracks"
-
 #define SPOTIFY_ACCESS_TOKEN_LENGTH 309
 
 class SpotifyAPI {
@@ -50,6 +36,10 @@ class SpotifyAPI {
         void playPause();
         void getPlaybackState();
         void nextPreviousTrack(bool next);
+        void saveCurrentTrack(int playlistInt);
+        String getCurrentTrack();
+        void findCBSPlaylist();
+        void transferPlayback();
 
         void handleRoot();
         void handleCallback();
@@ -57,13 +47,12 @@ class SpotifyAPI {
 
         void setSpotifyServer();
 
-        size_t getStringLength(char *);
-
         bool isPlaying;
         HTTPClient http;
         WiFiClientSecure client;
         ESP8266WebServer server;
         bool gotRefreshToken = false;
+        String cbsPlaylistId = "29D2r3O6agYvzhKmdpnhfQ";
 
     private: 
         char _bearerToken[SPOTIFY_ACCESS_TOKEN_LENGTH + 10]; //10 extra is for "bearer " at the start
@@ -94,7 +83,7 @@ class SpotifyAPI {
         )";
         const char *_callbackURI = R"(http%3A%2F%2Fcbs.local%2Fcallback%2F)";
 
-        const char *_scope = R"(user-read-playback-state%20user-modify-playback-state%20playlist-modify-public%20playlist-modify-private)";
+        const char *_scope = R"(user-read-playback-state%20user-modify-playback-state%20playlist-modify-public%20playlist-modify-private%20user-library-modify)";
         
 };
 

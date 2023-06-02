@@ -74,6 +74,7 @@ bool SpotifyAPI::refreshAccessToken()
         const char *accessToken = doc["access_token"].as<const char *>();
         if (accessToken != NULL && (SPOTIFY_ACCESS_TOKEN_LENGTH >= strlen(accessToken)))
         {
+            Serial.println(accessToken);
             sprintf(this->_bearerToken, "Bearer %s", accessToken);
             int tokenTtl = doc["expires_in"];             // Usually 3600 (1 hour)
             tokenTimeToLiveMs = (tokenTtl * 1000) - 2000; // The 2000 is just to force the token expiry to check if its very close
@@ -112,10 +113,9 @@ void SpotifyAPI::nextPreviousTrack(bool next){
 
 void SpotifyAPI::getPlaybackState(){
     String url = "https://api.spotify.com/v1/me/player";
-    http.begin(this->client, url);
+    http.begin(client, url);
     http.addHeader("Accept", "application/json");
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("Content-Length", "0");
     http.addHeader("Authorization", _bearerToken);
 
     int httpCode = http.GET();
@@ -141,7 +141,6 @@ void SpotifyAPI::playPause(){
     http.begin(client, url);
     http.addHeader("Accept", "application/json");
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("Content-Length", "0");
     http.addHeader("Authorization", _bearerToken);
 
     int httpCode = http.sendRequest("PUT");
@@ -153,6 +152,154 @@ void SpotifyAPI::playPause(){
     http.end();
 }
 
+String SpotifyAPI::getCurrentTrack(){
+    String url = "https://api.spotify.com/v1/me/player/currently-playing";
+    String currentTrackId = "";
+
+    http.begin(client, url);
+    http.addHeader("Accept", "application/json");
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("Authorization", _bearerToken);
+
+    int httpCode = http.GET();
+    if (httpCode == 200){
+        String payload = http.getString();
+        DynamicJsonDocument doc(1024);
+        StaticJsonDocument<64> filter;
+        JsonObject filter_item = filter.createNestedObject("item");
+        filter_item["id"] = true;
+        deserializeJson(doc, payload, DeserializationOption::Filter(filter));
+        const char* tempValue = doc["item"]["id"];
+        currentTrackId = String(tempValue);
+
+    } else {
+        Serial.printf("http error: %s\n", http.errorToString(httpCode).c_str());
+    }
+    http.end();
+    return currentTrackId;
+}
+
+void SpotifyAPI::saveCurrentTrack(int playlistInt){
+    String trackId = getCurrentTrack();
+    int httpResponseCode = 0;
+    
+    
+    if (playlistInt == 1){
+
+        String url = "https://api.spotify.com/v1/playlists/" + cbsPlaylistId + "/tracks";
+        String payload = "{\"uris\": [\"spotify:track:" + trackId + "\"], \"position\": 0}";
+        
+        http.begin(client, url);
+        http.addHeader("Accept", "application/json");
+        http.addHeader("Authorization", _bearerToken);
+        http.addHeader("Content-Type", "application/json");
+        
+        httpResponseCode = http.POST(payload);
+    } else {
+
+        String url = "https://api.spotify.com/v1/me/tracks";
+        String payload = "{\"ids\": [\"" + trackId + "\"]}";
+
+        http.begin(client, url);
+        http.addHeader("Accept", "application/json");
+        http.addHeader("Authorization", _bearerToken);
+        http.addHeader("Content-Type", "application/json");
+
+        httpResponseCode = http.PUT(payload);
+    }
+
+     if (httpResponseCode > 0) {
+        Serial.print("HTTP Response code: ");
+        Serial.println(httpResponseCode);
+        String responseBody = http.getString();
+        Serial.println(responseBody);
+    } else {
+        Serial.print("Error in HTTP request: ");
+        Serial.println(http.errorToString(httpResponseCode));
+    }
+
+    http.end();
+}
+
+void SpotifyAPI::findCBSPlaylist() {
+
+  // Prepare the request URL
+  String url = "https://api.spotify.com/v1/me/playlists";
+  
+  // Set the request headers
+  http.begin(client, url);
+  http.addHeader("Authorization", _bearerToken);
+  http.addHeader("Accept", "application/json");
+  http.addHeader("Content-Type", "application/json");
+
+  // Send the GET request
+  int httpResponseCode = http.GET();
+  
+  // Check the response
+  if (httpResponseCode == 200) {
+    String payload = http.getString();
+    Serial.println("Printing payload");
+    Serial.println(payload.c_str());
+    DynamicJsonDocument doc(2048);
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (error) {
+      Serial.println("Error parsing JSON response");
+      Serial.println(error.c_str());
+      http.end();
+      return;
+    }
+
+    // Extract playlist information and search for the desired playlist by name
+    JsonArray playlists = doc["items"].as<JsonArray>();
+    int numPlaylists = playlists.size();
+
+    for (int i = 0; i < numPlaylists; i++) {
+      String playlistId = playlists[i]["id"].as<String>();
+      String playlistName = playlists[i]["name"].as<String>();
+
+      // Check if the current playlist name matches the desired name
+      if (playlistName.equals("CBS")) {
+        Serial.println("Playlist found!");
+        Serial.print("Playlist ID: ");
+        Serial.println(playlistId);
+        cbsPlaylistId = playlistId;
+        http.end();
+        return;
+      }
+    }
+
+    // Playlist not found
+    Serial.println("Playlist not found!");
+  } else {
+    Serial.print("Error in HTTP request: ");
+    Serial.println(http.errorToString(httpResponseCode));
+  }
+  
+  // Cleanup
+  http.end();
+}
+
+void SpotifyAPI::transferPlayback(){
+    String url = "https://api.spotify.com/v1/me/player/devices";
+
+    http.begin(client, url);
+    http.addHeader("Authorization", _bearerToken);
+    http.addHeader("Accept", "application/json");
+    http.addHeader("Content-Type", "application/json");
+
+    int httpResponseCode = http.GET();
+
+    if (httpResponseCode == 200) {
+        String payload = http.getString();
+        Serial.println("Printing payload");
+        Serial.println(payload.c_str());
+    } else {
+        Serial.print("Error in HTTP request: ");
+        Serial.println(http.errorToString(httpResponseCode));
+    }
+    http.end();
+}
 
 void SpotifyAPI::handleRoot()
 {
@@ -250,14 +397,6 @@ void SpotifyAPI::setSpotifyServer(){
         this->handleNotFound();
     });
     server.begin(); 
-}
-
-size_t SpotifyAPI::getStringLength(char* str) {
-  size_t length = 0;
-  while (str[length] != '\0') {
-    length++;
-  }
-  return length;
 }
 
 bool SpotifyAPI::checkToken(){

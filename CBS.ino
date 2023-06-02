@@ -64,12 +64,12 @@ void setup(){
   }
 
   while (!spotifyAPI.gotRefreshToken){
+    delay(500);
     cbs.ledBlink(spotifyPin);
     MDNS.update();
     spotifyAPI.server.handleClient();
   }
   digitalWrite(spotifyPin, HIGH);
-
 
 }
 
@@ -78,13 +78,10 @@ void loop() {
   nextPreviousButton.update();
   saveButton.update();
   
-  if (millis() - lastTime >= 10000) {
-    // call your function here
-    spotifyAPI.getPlaybackState();
+  if (millis() - lastTime >= 30000) {
     if ( spotifyAPI.checkToken() ){
       Serial.println("Token refreshed");
     }
-    // update the lastTime variable to the current time
     lastTime = millis();
   }
 
@@ -96,12 +93,22 @@ void loop() {
   }
 
   if (playPauseButton.isSingleClick()){
-    spotifyAPI.playPause();
     spotifyAPI.getPlaybackState();
+    spotifyAPI.playPause();
+    
   }
 
   if (saveButton.isLongClick()){
-    cbs.clearEEPROM(); 
+//    cbs.clearEEPROM(); 
+//   spotifyAPI.transferPlayback();
+    spotifyAPI.findCBSPlaylist();
   }
+  if (saveButton.isSingleClick()){
+    spotifyAPI.saveCurrentTrack(1);
+  }
+  if (saveButton.isDoubleClick()){
+    spotifyAPI.saveCurrentTrack(2);
+  }
+  
 
 }
